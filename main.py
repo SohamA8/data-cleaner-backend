@@ -12,8 +12,8 @@ os.makedirs("uploads", exist_ok=True)
 os.makedirs("outputs", exist_ok=True)
 
 @app.get("/")
-def home():
-    return HTMLResponse(open("index.html", encoding="utf-8").read())
+def health():
+    return {"status": "Data Cleaner API is running"}
 
 @app.post("/clean")
 async def clean_data(
@@ -94,3 +94,4 @@ async def clean_data(
         filename=f"cleaned_{file.filename}",
         media_type="application/octet-stream"
     )
+
