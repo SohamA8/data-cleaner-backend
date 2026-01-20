@@ -1,11 +1,21 @@
 from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import os
 import uuid
 import re
 
 app = FastAPI()
+
+# ✅ CORS (VERY IMPORTANT)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # for personal tool
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Create folders
 os.makedirs("uploads", exist_ok=True)
@@ -23,14 +33,16 @@ async def clean_data(
     remove_blank_rows: bool = Form(False)
 ):
     file_id = str(uuid.uuid4())
-    input_path = f"uploads/{file_id}_{file.filename}"
-    output_path = f"outputs/cleaned_{file_id}_{file.filename}"
+    safe_name = file.filename.replace(" ", "_")
+    input_path = f"uploads/{file_id}_{safe_name}"
+    output_path = f"outputs/cleaned_{file_id}_{safe_name}"
 
+    # Save uploaded file
     with open(input_path, "wb") as f:
         f.write(await file.read())
 
     # Read file
-    if file.filename.lower().endswith(".csv"):
+    if safe_name.lower().endswith(".csv"):
         df = pd.read_csv(input_path)
     else:
         df = pd.read_excel(input_path, engine="openpyxl")
@@ -38,13 +50,14 @@ async def clean_data(
     # Preview BEFORE
     preview_before = df.head(10).fillna("").to_dict(orient="records")
 
-    # Cleaning logic
+    # Cleaning rules
     if remove_blank_rows:
         df = df.dropna(how="all")
 
     if trim_spaces:
         df = df.applymap(
-            lambda x: re.sub(r"\s+", " ", x).strip() if isinstance(x, str) else x
+            lambda x: re.sub(r"\s+", " ", x).strip()
+            if isinstance(x, str) else x
         )
 
     if remove_duplicates:
@@ -53,8 +66,8 @@ async def clean_data(
     # Preview AFTER
     preview_after = df.head(10).fillna("").to_dict(orient="records")
 
-    # Save file
-    if file.filename.lower().endswith(".csv"):
+    # Save cleaned file
+    if safe_name.lower().endswith(".csv"):
         df.to_csv(output_path, index=False)
     else:
         df.to_excel(output_path, index=False)
@@ -68,4 +81,8 @@ async def clean_data(
 @app.get("/download/{filename}")
 def download_file(filename: str):
     file_path = f"outputs/{filename}"
-    return FileResponse(file_path, filename=filename)
+    return FileResponse(
+        file_path,
+        filename=filename,
+        media_type="application/octet-stream"
+    )
