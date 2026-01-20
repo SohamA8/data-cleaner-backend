@@ -1,13 +1,13 @@
 from fastapi import FastAPI, File, UploadFile, Form
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse
 import pandas as pd
 import os
 import uuid
-from pathlib import Path
+import re
 
 app = FastAPI()
 
-# Create folders if not present
+# Create folders
 os.makedirs("uploads", exist_ok=True)
 os.makedirs("outputs", exist_ok=True)
 
@@ -26,12 +26,11 @@ async def clean_data(
     input_path = f"uploads/{file_id}_{file.filename}"
     output_path = f"outputs/cleaned_{file_id}_{file.filename}"
 
-    contents = await file.read()
     with open(input_path, "wb") as f:
-        f.write(contents)
+        f.write(await file.read())
 
     # Read file
-    if file.filename.endswith(".csv"):
+    if file.filename.lower().endswith(".csv"):
         df = pd.read_csv(input_path)
     else:
         df = pd.read_excel(input_path, engine="openpyxl")
@@ -39,7 +38,7 @@ async def clean_data(
     # Preview BEFORE
     preview_before = df.head(10).fillna("").to_dict(orient="records")
 
-    # Cleaning rules
+    # Cleaning logic
     if remove_blank_rows:
         df = df.dropna(how="all")
 
@@ -54,8 +53,8 @@ async def clean_data(
     # Preview AFTER
     preview_after = df.head(10).fillna("").to_dict(orient="records")
 
-    # Save cleaned file
-    if file.filename.endswith(".csv"):
+    # Save file
+    if file.filename.lower().endswith(".csv"):
         df.to_csv(output_path, index=False)
     else:
         df.to_excel(output_path, index=False)
@@ -66,3 +65,7 @@ async def clean_data(
         "download_url": f"/download/{os.path.basename(output_path)}"
     }
 
+@app.get("/download/{filename}")
+def download_file(filename: str):
+    file_path = f"outputs/{filename}"
+    return FileResponse(file_path, filename=filename)
