@@ -1,3 +1,4 @@
+from macro_backend import router as macro_router
 from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,7 +8,7 @@ import uuid
 import re
 
 app = FastAPI()
-
+app.include_router(macro_router)
 # ✅ CORS (VERY IMPORTANT)
 app.add_middleware(
     CORSMiddleware,
@@ -86,3 +87,4 @@ def download_file(filename: str):
         filename=filename,
         media_type="application/octet-stream"
     )
+
