@@ -1,4 +1,5 @@
 from fastapi import FastAPI, UploadFile, File
+from fastapi import APIRouter, UploadFile, File
 from fastapi.responses import FileResponse, JSONResponse
 import win32com.client as win32
 import tempfile
@@ -6,14 +7,14 @@ import os
 import shutil
 import pythoncom
 
-app = FastAPI()
+router = APIRouter()
 
-
-@app.post("/apply-macro")
+@router.post("/apply-macro")
 async def apply_macro(
     excel_file: UploadFile = File(...),
     macro_file: UploadFile = File(...)
 ):
+
     pythoncom.CoInitialize()
 
     temp_dir = tempfile.mkdtemp()
@@ -62,3 +63,4 @@ async def apply_macro(
         filename="macro_applied.xlsx",
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
